@@ -35,7 +35,7 @@ func StartApplication() {
 	}
 
 	pingController := ping.NewPingController()
-	postController := controller.PostController(
+	postController := controller.NewPostController(
 		postservice.NewPostService(
 			postrepository.NewPostRepository(database),
 		),
