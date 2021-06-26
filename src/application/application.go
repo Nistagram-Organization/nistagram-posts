@@ -11,6 +11,7 @@ import (
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/user_tag"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +20,8 @@ var (
 )
 
 func StartApplication() {
+	router.Use(cors.Default())
+
 	database := mysql.NewMySqlDatabaseClient()
 	if err := database.Init(); err != nil {
 		panic(err)
@@ -43,6 +46,7 @@ func StartApplication() {
 
 	router.GET("/posts", postController.GetAll)
 	router.POST("/posts/like", postController.LikePost)
+	router.DELETE("/posts/like", postController.UnlikePost)
 
 	router.Run(":8085")
 }
