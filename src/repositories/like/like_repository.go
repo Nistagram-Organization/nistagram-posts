@@ -30,7 +30,6 @@ func (l *likesRepository) GetByUserAndPost(userId uint, postId uint) (*like.Like
 		PostID: postId,
 	}
 	if err := l.db.Where("user_id = ? AND post_id = ?", userId, postId).First(&likeEntity).Error; err != nil {
-		fmt.Sprintln(err)
 		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Post has not been liked by user"))
 	}
 	return &likeEntity, nil
