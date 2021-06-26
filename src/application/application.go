@@ -1,9 +1,9 @@
 package application
 
 import (
-	"github.com/Nistagram-Organization/nistagram-posts/src/controllers/ping"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
+	likerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/like"
 	postrepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
 	postservice "github.com/Nistagram-Organization/nistagram-posts/src/services/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/comment"
@@ -34,15 +34,15 @@ func StartApplication() {
 		panic(err)
 	}
 
-	pingController := ping.NewPingController()
 	postController := controller.NewPostController(
 		postservice.NewPostService(
 			postrepository.NewPostRepository(database),
+			likerepository.NewLikeRepository(database),
 		),
 	)
 
-	router.GET("/ping", pingController.Ping)
 	router.GET("/posts", postController.GetAll)
+	router.POST("/posts/like", postController.LikePost)
 
 	router.Run(":8085")
 }
