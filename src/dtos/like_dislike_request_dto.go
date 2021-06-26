@@ -1,6 +1,6 @@
 package dtos
 
-type LikeRequestDTO struct {
+type LikeDislikeRequestDTO struct {
 	PostID uint
 	UserID uint
 }

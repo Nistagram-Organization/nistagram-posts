@@ -3,6 +3,7 @@ package application
 import (
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
+	dislikerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
 	likerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/like"
 	postrepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
 	postservice "github.com/Nistagram-Organization/nistagram-posts/src/services/post"
@@ -41,12 +42,15 @@ func StartApplication() {
 		postservice.NewPostService(
 			postrepository.NewPostRepository(database),
 			likerepository.NewLikeRepository(database),
+			dislikerepository.NewDislikeRepository(database),
 		),
 	)
 
 	router.GET("/posts", postController.GetAll)
 	router.POST("/posts/like", postController.LikePost)
 	router.DELETE("/posts/like", postController.UnlikePost)
+	router.POST("/posts/dislike", postController.DislikePost)
+	router.DELETE("/posts/dislike", postController.UndislikePost)
 
 	router.Run(":8085")
 }
