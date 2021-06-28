@@ -33,14 +33,14 @@ func (p *postsRepository) GetAll() []post.Post {
 }
 
 func (p *postsRepository) Get(id uint) (*post.Post, rest_error.RestErr) {
-	post := post.Post{
+	postEntity := post.Post{
 		ID: id,
 	}
-	if err := p.db.Take(&post, post.ID).Error; err != nil {
+	if err := p.db.Take(&postEntity, postEntity.ID).Error; err != nil {
 		fmt.Sprintln(err)
-		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Error when trying to get post with id %d", post.ID))
+		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Error when trying to get post with id %d", postEntity.ID))
 	}
-	return &post, nil
+	return &postEntity, nil
 }
 
 func (p *postsRepository) Update(post *post.Post) rest_error.RestErr {
