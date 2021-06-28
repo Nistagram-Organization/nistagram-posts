@@ -15,6 +15,7 @@ type PostController interface {
 	UnlikePost(*gin.Context)
 	DislikePost(ctx *gin.Context)
 	UndislikePost(ctx *gin.Context)
+	ReportInappropriateContent(*gin.Context)
 }
 
 type postsController struct {
@@ -43,7 +44,13 @@ func (p *postsController) LikePost(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, p.postsService.LikePost(&likeRequest))
+	likeErr := p.postsService.LikePost(&likeRequest)
+	if likeErr != nil {
+		ctx.JSON(likeErr.Status(), likeErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, likeErr)
 }
 
 func (p *postsController) UnlikePost(ctx *gin.Context) {
@@ -59,7 +66,13 @@ func (p *postsController) UnlikePost(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, p.postsService.UnlikePost(userId, postId))
+	unlikeErr := p.postsService.UnlikePost(userId, postId)
+	if unlikeErr != nil {
+		ctx.JSON(unlikeErr.Status(), unlikeErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, unlikeErr)
 }
 
 func (p *postsController) DislikePost(ctx *gin.Context) {
@@ -70,7 +83,13 @@ func (p *postsController) DislikePost(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, p.postsService.DislikePost(&dislikeRequest))
+	dislikeErr := p.postsService.DislikePost(&dislikeRequest)
+	if dislikeErr != nil {
+		ctx.JSON(dislikeErr.Status(), dislikeErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dislikeErr)
 }
 
 func (p *postsController) UndislikePost(ctx *gin.Context) {
@@ -86,7 +105,29 @@ func (p *postsController) UndislikePost(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, p.postsService.UndislikePost(userId, postId))
+	undislikeErr := p.postsService.UndislikePost(userId, postId)
+	if undislikeErr != nil {
+		ctx.JSON(undislikeErr.Status(), undislikeErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, undislikeErr)
+}
+
+func (p *postsController) ReportInappropriateContent(ctx *gin.Context) {
+	postId, idErr := getId(ctx.Param("id"))
+	if idErr != nil {
+		ctx.JSON(idErr.Status(), idErr)
+		return
+	}
+
+	reportErr := p.postsService.ReportInappropriateContent(postId)
+	if reportErr != nil {
+		ctx.JSON(reportErr.Status(), reportErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, reportErr)
 }
 
 func (p *postsController) GetAll(ctx *gin.Context) {

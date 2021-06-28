@@ -17,6 +17,7 @@ type PostService interface {
 	UnlikePost(uint, uint) rest_error.RestErr
 	DislikePost(d *dtos.LikeDislikeRequestDTO) rest_error.RestErr
 	UndislikePost(uint, uint) rest_error.RestErr
+	ReportInappropriateContent(uint) rest_error.RestErr
 }
 
 type postsService struct {
@@ -95,4 +96,18 @@ func (s *postsService) UndislikePost(userId uint, postId uint) rest_error.RestEr
 	}
 
 	return s.dislikesRepository.Delete(&dislikeEntity)
+}
+
+func (s *postsService) ReportInappropriateContent(postId uint) rest_error.RestErr {
+	postEntity, err := s.postsRepository.Get(postId)
+	if err != nil {
+		return err
+	}
+
+	if !postEntity.MarkedAsInappropriate {
+		postEntity.MarkedAsInappropriate = true
+		return s.postsRepository.Update(postEntity)
+	} else {
+		return nil
+	}
 }

@@ -51,6 +51,7 @@ func StartApplication() {
 	router.DELETE("/posts/like", postController.UnlikePost)
 	router.POST("/posts/dislike", postController.DislikePost)
 	router.DELETE("/posts/dislike", postController.UndislikePost)
+	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
 
 	router.Run(":8085")
 }

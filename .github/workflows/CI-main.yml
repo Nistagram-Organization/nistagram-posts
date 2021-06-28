@@ -1,0 +1,33 @@
+name: Main CI workflow
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  CI:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.15.x
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Create semantic version
+      id: versioning
+      uses: paulhatch/semantic-version@v4.0.2
+      with:
+        tag_prefix: ""
+        major_pattern: "(MAJOR)"
+        minor_pattern: "(MINOR)"
+        format: "${major}.${minor}.${patch}"
+        short_tags: false
+        bump_each_commit: true
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
