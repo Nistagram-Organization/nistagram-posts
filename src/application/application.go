@@ -3,6 +3,7 @@ package application
 import (
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
+	commentRepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
 	dislikerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
 	likerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/like"
 	postrepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
@@ -43,6 +44,7 @@ func StartApplication() {
 			postrepository.NewPostRepository(database),
 			likerepository.NewLikeRepository(database),
 			dislikerepository.NewDislikeRepository(database),
+			commentRepository.NewCommentRepository(database),
 		),
 	)
 
@@ -52,6 +54,7 @@ func StartApplication() {
 	router.POST("/posts/dislike", postController.DislikePost)
 	router.DELETE("/posts/dislike", postController.UndislikePost)
 	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
+	router.POST("/posts/comment", postController.PostComment)
 
 	router.Run(":8085")
 }
