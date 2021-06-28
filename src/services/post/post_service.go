@@ -111,4 +111,3 @@ func (s *postsService) ReportInappropriateContent(postId uint) rest_error.RestEr
 		return nil
 	}
 }
-
