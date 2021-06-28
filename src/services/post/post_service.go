@@ -2,9 +2,12 @@ package post
 
 import (
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
+	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/like"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
+	"github.com/Nistagram-Organization/nistagram-posts/src/time_utils"
+	modelComment "github.com/Nistagram-Organization/nistagram-shared/src/model/comment"
 	modelDislike "github.com/Nistagram-Organization/nistagram-shared/src/model/dislike"
 	modelLike "github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	modelPost "github.com/Nistagram-Organization/nistagram-shared/src/model/post"
@@ -18,20 +21,33 @@ type PostService interface {
 	DislikePost(d *dtos.LikeDislikeRequestDTO) rest_error.RestErr
 	UndislikePost(uint, uint) rest_error.RestErr
 	ReportInappropriateContent(uint) rest_error.RestErr
+	PostComment(*modelComment.Comment) rest_error.RestErr
 }
 
 type postsService struct {
 	postsRepository    post.PostRepository
 	likesRepository    like.LikeRepository
 	dislikesRepository dislike.DislikeRepository
+	commentsRepository comment.CommentRepository
 }
 
-func NewPostService(postsRepository post.PostRepository, likesRepository like.LikeRepository, dislikesRepository dislike.DislikeRepository) PostService {
+func NewPostService(postsRepository post.PostRepository, likesRepository like.LikeRepository, dislikesRepository dislike.DislikeRepository,
+	commentsRepository comment.CommentRepository) PostService {
 	return &postsService{
 		postsRepository:    postsRepository,
 		likesRepository:    likesRepository,
 		dislikesRepository: dislikesRepository,
+		commentsRepository: commentsRepository,
 	}
+}
+
+func (s *postsService) checkIfPostExists(postId uint) rest_error.RestErr {
+	_, err := s.postsRepository.Get(postId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *postsService) GetAll() []modelPost.Post {
@@ -39,6 +55,10 @@ func (s *postsService) GetAll() []modelPost.Post {
 }
 
 func (s *postsService) LikePost(likeRequest *dtos.LikeDislikeRequestDTO) rest_error.RestErr {
+	if err := s.checkIfPostExists(likeRequest.PostID); err != nil {
+		return err
+	}
+
 	if _, getLikeErr := s.likesRepository.GetByUserAndPost(likeRequest.UserID, likeRequest.PostID); getLikeErr == nil {
 		return rest_error.NewBadRequestError("Post already liked")
 	}
@@ -56,6 +76,10 @@ func (s *postsService) LikePost(likeRequest *dtos.LikeDislikeRequestDTO) rest_er
 }
 
 func (s *postsService) DislikePost(dislikeRequest *dtos.LikeDislikeRequestDTO) rest_error.RestErr {
+	if err := s.checkIfPostExists(dislikeRequest.PostID); err != nil {
+		return err
+	}
+
 	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(dislikeRequest.UserID, dislikeRequest.PostID); getDislikeErr == nil {
 		return rest_error.NewBadRequestError("Post already disliked")
 	}
@@ -73,6 +97,10 @@ func (s *postsService) DislikePost(dislikeRequest *dtos.LikeDislikeRequestDTO) r
 }
 
 func (s *postsService) UnlikePost(userId uint, postId uint) rest_error.RestErr {
+	if err := s.checkIfPostExists(postId); err != nil {
+		return err
+	}
+
 	if _, getLikeErr := s.likesRepository.GetByUserAndPost(userId, postId); getLikeErr != nil {
 		return getLikeErr
 	}
@@ -86,6 +114,10 @@ func (s *postsService) UnlikePost(userId uint, postId uint) rest_error.RestErr {
 }
 
 func (s *postsService) UndislikePost(userId uint, postId uint) rest_error.RestErr {
+	if err := s.checkIfPostExists(postId); err != nil {
+		return err
+	}
+
 	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(userId, postId); getDislikeErr != nil {
 		return getDislikeErr
 	}
@@ -110,4 +142,13 @@ func (s *postsService) ReportInappropriateContent(postId uint) rest_error.RestEr
 	} else {
 		return nil
 	}
+}
+
+func (s *postsService) PostComment(commentEntity *modelComment.Comment) rest_error.RestErr {
+	if err := s.checkIfPostExists(commentEntity.PostID); err != nil {
+		return err
+	}
+	commentEntity.Date = time_utils.Now()
+
+	return s.commentsRepository.Create(commentEntity)
 }

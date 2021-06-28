@@ -3,6 +3,7 @@ package post
 import (
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
 	"github.com/Nistagram-Organization/nistagram-posts/src/services/post"
+	"github.com/Nistagram-Organization/nistagram-shared/src/model/comment"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/rest_error"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -16,6 +17,7 @@ type PostController interface {
 	DislikePost(ctx *gin.Context)
 	UndislikePost(ctx *gin.Context)
 	ReportInappropriateContent(*gin.Context)
+	PostComment(*gin.Context)
 }
 
 type postsController struct {
@@ -128,6 +130,23 @@ func (p *postsController) ReportInappropriateContent(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, reportErr)
+}
+
+func (p *postsController) PostComment(ctx *gin.Context) {
+	var commentEntity comment.Comment
+	if err := ctx.ShouldBindJSON(&commentEntity); err != nil {
+		restErr := rest_error.NewBadRequestError("invalid json body")
+		ctx.JSON(restErr.Status(), restErr)
+		return
+	}
+
+	commentErr := p.postsService.PostComment(&commentEntity)
+	if commentErr != nil {
+		ctx.JSON(commentErr.Status(), commentErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, commentErr)
 }
 
 func (p *postsController) GetAll(ctx *gin.Context) {
