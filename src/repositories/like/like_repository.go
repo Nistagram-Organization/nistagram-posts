@@ -43,7 +43,7 @@ func (l *likesRepository) Create(like *like.Like) rest_error.RestErr {
 }
 
 func (l *likesRepository) Delete(like *like.Like) rest_error.RestErr {
-	if err :=l.db.Where("user_id = ? AND post_id = ?", like.UserID, like.PostID).Delete(like).Error; err != nil {
+	if err := l.db.Where("user_id = ? AND post_id = ?", like.UserID, like.PostID).Delete(like).Error; err != nil {
 		return rest_error.NewInternalServerError("Error when trying to unlike a post", err)
 	}
 	return nil
