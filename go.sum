@@ -1,7 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210630120128-e25d3fa23ea4 h1:m1ZrY9JwESjboQZGqGn9UDY24a38uf0STGeSVeOLs2M=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210630120128-e25d3fa23ea4/go.mod h1:MPP3kNsMICBZlcGmIQEp5WMSN7AZsL7nleNAZNGj5c8=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210701114723-538c0023b98d h1:UEbwfpP1ofUHDtXBbEH6PMPmymjOtsesr5jNJ6TKDIc=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210701114723-538c0023b98d/go.mod h1:MPP3kNsMICBZlcGmIQEp5WMSN7AZsL7nleNAZNGj5c8=
 github.com/auth0/go-jwt-middleware v1.0.1/go.mod h1:YSeUX3z6+TF2H+7padiEqNJ73Zy9vXW72U//IgN0BIM=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=

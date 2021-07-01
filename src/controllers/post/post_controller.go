@@ -56,19 +56,13 @@ func (p *postsController) LikePost(ctx *gin.Context) {
 }
 
 func (p *postsController) UnlikePost(ctx *gin.Context) {
-	userId, idErr := getId(ctx.Query("user_id"))
-	if idErr != nil {
-		ctx.JSON(idErr.Status(), idErr)
-		return
-	}
-
 	postId, idErr := getId(ctx.Query("post_id"))
 	if idErr != nil {
 		ctx.JSON(idErr.Status(), idErr)
 		return
 	}
 
-	unlikeErr := p.postsService.UnlikePost(userId, postId)
+	unlikeErr := p.postsService.UnlikePost(ctx.Query("user_mail"), postId)
 	if unlikeErr != nil {
 		ctx.JSON(unlikeErr.Status(), unlikeErr)
 		return
@@ -95,19 +89,13 @@ func (p *postsController) DislikePost(ctx *gin.Context) {
 }
 
 func (p *postsController) UndislikePost(ctx *gin.Context) {
-	userId, idErr := getId(ctx.Query("user_id"))
-	if idErr != nil {
-		ctx.JSON(idErr.Status(), idErr)
-		return
-	}
-
 	postId, idErr := getId(ctx.Query("post_id"))
 	if idErr != nil {
 		ctx.JSON(idErr.Status(), idErr)
 		return
 	}
 
-	undislikeErr := p.postsService.UndislikePost(userId, postId)
+	undislikeErr := p.postsService.UndislikePost(ctx.Query("user_mail"), postId)
 	if undislikeErr != nil {
 		ctx.JSON(undislikeErr.Status(), undislikeErr)
 		return

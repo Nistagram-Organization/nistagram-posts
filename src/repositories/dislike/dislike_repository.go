@@ -10,7 +10,7 @@ import (
 
 type DislikeRepository interface {
 	Create(*dislike.Dislike) rest_error.RestErr
-	GetByUserAndPost(uint, uint) (*dislike.Dislike, rest_error.RestErr)
+	GetByUserAndPost(string, uint) (*dislike.Dislike, rest_error.RestErr)
 	Delete(*dislike.Dislike) rest_error.RestErr
 }
 
@@ -24,12 +24,12 @@ func NewDislikeRepository(databaseClient datasources.DatabaseClient) DislikeRepo
 	}
 }
 
-func (d *dislikesRepository) GetByUserAndPost(userId uint, postId uint) (*dislike.Dislike, rest_error.RestErr) {
+func (d *dislikesRepository) GetByUserAndPost(userEmail string, postId uint) (*dislike.Dislike, rest_error.RestErr) {
 	dislikeEntity := dislike.Dislike{
-		UserID: userId,
+		UserEmail: userEmail,
 		PostID: postId,
 	}
-	if err := d.db.Where("user_id = ? AND post_id = ?", userId, postId).First(&dislikeEntity).Error; err != nil {
+	if err := d.db.Where("user_email = ? AND post_id = ?", userEmail, postId).First(&dislikeEntity).Error; err != nil {
 		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Post has not been disliked by user"))
 	}
 	return &dislikeEntity, nil
@@ -43,7 +43,7 @@ func (d *dislikesRepository) Create(dislike *dislike.Dislike) rest_error.RestErr
 }
 
 func (d *dislikesRepository) Delete(dislike *dislike.Dislike) rest_error.RestErr {
-	if err := d.db.Where("user_id = ? AND post_id = ?", dislike.UserID, dislike.PostID).Delete(dislike).Error; err != nil {
+	if err := d.db.Where("user_email = ? AND post_id = ?", dislike.UserEmail, dislike.PostID).Delete(dislike).Error; err != nil {
 		return rest_error.NewInternalServerError("Error when trying to undislike a post", err)
 	}
 	return nil

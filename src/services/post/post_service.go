@@ -17,9 +17,9 @@ import (
 type PostService interface {
 	GetAll() []modelPost.Post
 	LikePost(*dtos.LikeDislikeRequestDTO) rest_error.RestErr
-	UnlikePost(uint, uint) rest_error.RestErr
+	UnlikePost(string, uint) rest_error.RestErr
 	DislikePost(d *dtos.LikeDislikeRequestDTO) rest_error.RestErr
-	UndislikePost(uint, uint) rest_error.RestErr
+	UndislikePost(string, uint) rest_error.RestErr
 	ReportInappropriateContent(uint) rest_error.RestErr
 	PostComment(*modelComment.Comment) rest_error.RestErr
 }
@@ -59,16 +59,16 @@ func (s *postsService) LikePost(likeRequest *dtos.LikeDislikeRequestDTO) rest_er
 		return err
 	}
 
-	if _, getLikeErr := s.likesRepository.GetByUserAndPost(likeRequest.UserID, likeRequest.PostID); getLikeErr == nil {
+	if _, getLikeErr := s.likesRepository.GetByUserAndPost(likeRequest.UserEmail, likeRequest.PostID); getLikeErr == nil {
 		return rest_error.NewBadRequestError("Post already liked")
 	}
 
-	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(likeRequest.UserID, likeRequest.PostID); getDislikeErr == nil {
+	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(likeRequest.UserEmail, likeRequest.PostID); getDislikeErr == nil {
 		return rest_error.NewBadRequestError("Post already disliked")
 	}
 
 	likeEntity := modelLike.Like{
-		UserID: likeRequest.UserID,
+		UserEmail: likeRequest.UserEmail,
 		PostID: likeRequest.PostID,
 	}
 
@@ -80,50 +80,50 @@ func (s *postsService) DislikePost(dislikeRequest *dtos.LikeDislikeRequestDTO) r
 		return err
 	}
 
-	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(dislikeRequest.UserID, dislikeRequest.PostID); getDislikeErr == nil {
+	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(dislikeRequest.UserEmail, dislikeRequest.PostID); getDislikeErr == nil {
 		return rest_error.NewBadRequestError("Post already disliked")
 	}
 
-	if _, getLikeErr := s.likesRepository.GetByUserAndPost(dislikeRequest.UserID, dislikeRequest.PostID); getLikeErr == nil {
+	if _, getLikeErr := s.likesRepository.GetByUserAndPost(dislikeRequest.UserEmail, dislikeRequest.PostID); getLikeErr == nil {
 		return rest_error.NewBadRequestError("Post already liked")
 	}
 
 	dislikeEntity := modelDislike.Dislike{
-		UserID: dislikeRequest.UserID,
+		UserEmail: dislikeRequest.UserEmail,
 		PostID: dislikeRequest.PostID,
 	}
 
 	return s.dislikesRepository.Create(&dislikeEntity)
 }
 
-func (s *postsService) UnlikePost(userId uint, postId uint) rest_error.RestErr {
+func (s *postsService) UnlikePost(userEmail string, postId uint) rest_error.RestErr {
 	if err := s.checkIfPostExists(postId); err != nil {
 		return err
 	}
 
-	if _, getLikeErr := s.likesRepository.GetByUserAndPost(userId, postId); getLikeErr != nil {
+	if _, getLikeErr := s.likesRepository.GetByUserAndPost(userEmail, postId); getLikeErr != nil {
 		return getLikeErr
 	}
 
 	likeEntity := modelLike.Like{
-		UserID: userId,
+		UserEmail: userEmail,
 		PostID: postId,
 	}
 
 	return s.likesRepository.Delete(&likeEntity)
 }
 
-func (s *postsService) UndislikePost(userId uint, postId uint) rest_error.RestErr {
+func (s *postsService) UndislikePost(userEmail string, postId uint) rest_error.RestErr {
 	if err := s.checkIfPostExists(postId); err != nil {
 		return err
 	}
 
-	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(userId, postId); getDislikeErr != nil {
+	if _, getDislikeErr := s.dislikesRepository.GetByUserAndPost(userEmail, postId); getDislikeErr != nil {
 		return getDislikeErr
 	}
 
 	dislikeEntity := modelDislike.Dislike{
-		UserID: userId,
+		UserEmail: userEmail,
 		PostID: postId,
 	}
 
