@@ -43,15 +43,14 @@ func StartApplication() {
 		panic(err)
 	}
 
-	postController := controller.NewPostController(
-		postservice.NewPostService(
-			postrepository.NewPostRepository(database),
-			likerepository.NewLikeRepository(database),
-			dislikerepository.NewDislikeRepository(database),
-			commentRepository.NewCommentRepository(database),
-			media_grpc_client.NewMediaGrpcClient(),
-		),
-	)
+	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
+	commentRepo := commentRepository.NewCommentRepository(database)
+	dislikeRepo := dislikerepository.NewDislikeRepository(database)
+	likeRepo := likerepository.NewLikeRepository(database)
+	postRepo := postrepository.NewPostRepository(database)
+	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient)
+
+	postController := controller.NewPostController(postService)
 
 	router.GET("/posts", postController.GetAll)
 	router.POST("/posts", postController.CreatePost)
