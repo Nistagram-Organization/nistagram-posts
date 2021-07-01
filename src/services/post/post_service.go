@@ -1,6 +1,7 @@
 package post
 
 import (
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
@@ -22,6 +23,7 @@ type PostService interface {
 	UndislikePost(string, uint) rest_error.RestErr
 	ReportInappropriateContent(uint) rest_error.RestErr
 	PostComment(*modelComment.Comment) rest_error.RestErr
+	CreatePost(*dtos.CreatePostDTO) rest_error.RestErr
 }
 
 type postsService struct {
@@ -29,15 +31,17 @@ type postsService struct {
 	likesRepository    like.LikeRepository
 	dislikesRepository dislike.DislikeRepository
 	commentsRepository comment.CommentRepository
+	mediaGrpcClient    media_grpc_client.MediaGrpcClient
 }
 
 func NewPostService(postsRepository post.PostRepository, likesRepository like.LikeRepository, dislikesRepository dislike.DislikeRepository,
-	commentsRepository comment.CommentRepository) PostService {
+	commentsRepository comment.CommentRepository, mediaGrpcClient media_grpc_client.MediaGrpcClient) PostService {
 	return &postsService{
 		postsRepository:    postsRepository,
 		likesRepository:    likesRepository,
 		dislikesRepository: dislikesRepository,
 		commentsRepository: commentsRepository,
+		mediaGrpcClient:    mediaGrpcClient,
 	}
 }
 
@@ -69,7 +73,7 @@ func (s *postsService) LikePost(likeRequest *dtos.LikeDislikeRequestDTO) rest_er
 
 	likeEntity := modelLike.Like{
 		UserEmail: likeRequest.UserEmail,
-		PostID: likeRequest.PostID,
+		PostID:    likeRequest.PostID,
 	}
 
 	return s.likesRepository.Create(&likeEntity)
@@ -90,7 +94,7 @@ func (s *postsService) DislikePost(dislikeRequest *dtos.LikeDislikeRequestDTO) r
 
 	dislikeEntity := modelDislike.Dislike{
 		UserEmail: dislikeRequest.UserEmail,
-		PostID: dislikeRequest.PostID,
+		PostID:    dislikeRequest.PostID,
 	}
 
 	return s.dislikesRepository.Create(&dislikeEntity)
@@ -107,7 +111,7 @@ func (s *postsService) UnlikePost(userEmail string, postId uint) rest_error.Rest
 
 	likeEntity := modelLike.Like{
 		UserEmail: userEmail,
-		PostID: postId,
+		PostID:    postId,
 	}
 
 	return s.likesRepository.Delete(&likeEntity)
@@ -124,7 +128,7 @@ func (s *postsService) UndislikePost(userEmail string, postId uint) rest_error.R
 
 	dislikeEntity := modelDislike.Dislike{
 		UserEmail: userEmail,
-		PostID: postId,
+		PostID:    postId,
 	}
 
 	return s.dislikesRepository.Delete(&dislikeEntity)
@@ -151,4 +155,27 @@ func (s *postsService) PostComment(commentEntity *modelComment.Comment) rest_err
 	commentEntity.Date = time_utils.Now()
 
 	return s.commentsRepository.Create(commentEntity)
+}
+
+func (s *postsService) CreatePost(postDTO *dtos.CreatePostDTO) rest_error.RestErr {
+	saveMediaRequest := dtos.SaveMediaRequest{
+		Image: postDTO.Image,
+	}
+
+	var mediaID *uint
+	var err error
+
+	if mediaID, err = s.mediaGrpcClient.SaveMedia(saveMediaRequest); err != nil {
+		return rest_error.NewInternalServerError("user grpc client error when saving media", err)
+	}
+
+	postEntity := modelPost.Post{
+		Description:           postDTO.Description,
+		UserEmail:             postDTO.UserEmail,
+		MarkedAsInappropriate: false,
+		Date:                  time_utils.Now(),
+		MediaID:               *mediaID,
+	}
+
+	return s.postsRepository.Create(&postEntity)
 }

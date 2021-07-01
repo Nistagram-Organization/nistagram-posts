@@ -1,6 +1,7 @@
 package application
 
 import (
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
 	commentRepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
@@ -42,16 +43,17 @@ func StartApplication() {
 		panic(err)
 	}
 
-	postController := controller.NewPostController(
-		postservice.NewPostService(
-			postrepository.NewPostRepository(database),
-			likerepository.NewLikeRepository(database),
-			dislikerepository.NewDislikeRepository(database),
-			commentRepository.NewCommentRepository(database),
-		),
-	)
+	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
+	commentRepo := commentRepository.NewCommentRepository(database)
+	dislikeRepo := dislikerepository.NewDislikeRepository(database)
+	likeRepo := likerepository.NewLikeRepository(database)
+	postRepo := postrepository.NewPostRepository(database)
+	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient)
+
+	postController := controller.NewPostController(postService)
 
 	router.GET("/posts", postController.GetAll)
+	router.POST("/posts", postController.CreatePost)
 	router.POST("/posts/like", postController.LikePost)
 	router.DELETE("/posts/like", postController.UnlikePost)
 	router.POST("/posts/dislike", postController.DislikePost)

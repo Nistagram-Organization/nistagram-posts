@@ -12,6 +12,7 @@ type PostRepository interface {
 	GetAll() []post.Post
 	Get(uint) (*post.Post, rest_error.RestErr)
 	Update(*post.Post) rest_error.RestErr
+	Create(*post.Post) rest_error.RestErr
 }
 
 type postsRepository struct {
@@ -41,6 +42,13 @@ func (p *postsRepository) Get(id uint) (*post.Post, rest_error.RestErr) {
 		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Error when trying to get post with id %d", postEntity.ID))
 	}
 	return &postEntity, nil
+}
+
+func (p *postsRepository) Create(post *post.Post) rest_error.RestErr {
+	if err := p.db.Create(post).Error; err != nil {
+		return rest_error.NewInternalServerError("Error when trying to create post", err)
+	}
+	return nil
 }
 
 func (p *postsRepository) Update(post *post.Post) rest_error.RestErr {
