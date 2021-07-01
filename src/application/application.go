@@ -1,6 +1,7 @@
 package application
 
 import (
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
 	commentRepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
@@ -48,10 +49,12 @@ func StartApplication() {
 			likerepository.NewLikeRepository(database),
 			dislikerepository.NewDislikeRepository(database),
 			commentRepository.NewCommentRepository(database),
+			media_grpc_client.NewMediaGrpcClient(),
 		),
 	)
 
 	router.GET("/posts", postController.GetAll)
+	router.POST("/posts", postController.CreatePost)
 	router.POST("/posts/like", postController.LikePost)
 	router.DELETE("/posts/like", postController.UnlikePost)
 	router.POST("/posts/dislike", postController.DislikePost)

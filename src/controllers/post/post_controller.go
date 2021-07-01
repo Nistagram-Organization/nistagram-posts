@@ -18,6 +18,7 @@ type PostController interface {
 	UndislikePost(ctx *gin.Context)
 	ReportInappropriateContent(*gin.Context)
 	PostComment(*gin.Context)
+	CreatePost(*gin.Context)
 }
 
 type postsController struct {
@@ -135,6 +136,23 @@ func (p *postsController) PostComment(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, commentErr)
+}
+
+func (p *postsController) CreatePost(ctx *gin.Context) {
+	var createPostDTO dtos.CreatePostDTO
+	if err := ctx.ShouldBindJSON(&createPostDTO); err != nil {
+		restErr := rest_error.NewBadRequestError("invalid json body")
+		ctx.JSON(restErr.Status(), restErr)
+		return
+	}
+
+	createErr := p.postsService.CreatePost(&createPostDTO)
+	if createErr != nil {
+		ctx.JSON(createErr.Status(), createErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, createErr)
 }
 
 func (p *postsController) GetAll(ctx *gin.Context) {
