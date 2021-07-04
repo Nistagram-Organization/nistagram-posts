@@ -12,6 +12,7 @@ type DislikeRepository interface {
 	Create(*dislike.Dislike) rest_error.RestErr
 	GetByUserAndPost(string, uint) (*dislike.Dislike, rest_error.RestErr)
 	Delete(*dislike.Dislike) rest_error.RestErr
+	GetNumberOfDislikes(uint) (int64, rest_error.RestErr)
 }
 
 type dislikesRepository struct {
@@ -47,4 +48,12 @@ func (d *dislikesRepository) Delete(dislike *dislike.Dislike) rest_error.RestErr
 		return rest_error.NewInternalServerError("Error when trying to undislike a post", err)
 	}
 	return nil
+}
+
+func (d *dislikesRepository) GetNumberOfDislikes(postID uint) (int64, rest_error.RestErr) {
+	var numberOfDislikes int64
+	if err := d.db.Where("post_id = ?", postID).Count(&numberOfDislikes).Error; err != nil {
+		return -1, rest_error.NewInternalServerError("Error when trying to get number of dislikes", err)
+	}
+	return numberOfDislikes, nil
 }

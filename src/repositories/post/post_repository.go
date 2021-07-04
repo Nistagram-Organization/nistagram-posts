@@ -13,6 +13,7 @@ type PostRepository interface {
 	Get(uint) (*post.Post, rest_error.RestErr)
 	Update(*post.Post) rest_error.RestErr
 	Create(*post.Post) rest_error.RestErr
+	GetUsersPosts(string) ([]post.Post, rest_error.RestErr)
 }
 
 type postsRepository struct {
@@ -38,10 +39,19 @@ func (p *postsRepository) Get(id uint) (*post.Post, rest_error.RestErr) {
 		ID: id,
 	}
 	if err := p.db.Take(&postEntity, postEntity.ID).Error; err != nil {
-		fmt.Sprintln(err)
 		return nil, rest_error.NewNotFoundError(fmt.Sprintf("Error when trying to get post with id %d", postEntity.ID))
 	}
 	return &postEntity, nil
+}
+
+func (p *postsRepository) GetUsersPosts(userEmail string) ([]post.Post, rest_error.RestErr) {
+	var collection []post.Post
+
+	if err := p.db.Where("user_email = ?", userEmail).Find(&collection).Error; err != nil {
+		return nil, rest_error.NewInternalServerError("Error when trying to get user's posts", err)
+	}
+
+	return collection, nil
 }
 
 func (p *postsRepository) Create(post *post.Post) rest_error.RestErr {

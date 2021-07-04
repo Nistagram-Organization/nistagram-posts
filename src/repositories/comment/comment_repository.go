@@ -8,7 +8,8 @@ import (
 )
 
 type CommentRepository interface {
-	Create(comment *comment.Comment) rest_error.RestErr
+	Create(*comment.Comment) rest_error.RestErr
+	GetComments(uint) ([]comment.Comment, rest_error.RestErr)
 }
 
 type commentsRepository struct {
@@ -26,4 +27,14 @@ func (c *commentsRepository) Create(comment *comment.Comment) rest_error.RestErr
 		return rest_error.NewInternalServerError("Error when trying to post a comment", err)
 	}
 	return nil
+}
+
+func (c *commentsRepository) GetComments(postID uint) ([]comment.Comment, rest_error.RestErr) {
+	var collection []comment.Comment
+
+	if err := c.db.Where("post_id = ?", postID).Find(&collection).Error; err != nil {
+		return nil, rest_error.NewInternalServerError("Error when trying to get post's comments", err)
+	}
+
+	return collection, nil
 }

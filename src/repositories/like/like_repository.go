@@ -12,6 +12,7 @@ type LikeRepository interface {
 	Create(*like.Like) rest_error.RestErr
 	GetByUserAndPost(string, uint) (*like.Like, rest_error.RestErr)
 	Delete(*like.Like) rest_error.RestErr
+	GetNumberOfLikes(uint) (int64, rest_error.RestErr)
 }
 
 type likesRepository struct {
@@ -47,4 +48,12 @@ func (l *likesRepository) Delete(like *like.Like) rest_error.RestErr {
 		return rest_error.NewInternalServerError("Error when trying to unlike a post", err)
 	}
 	return nil
+}
+
+func (l *likesRepository) GetNumberOfLikes(postID uint) (int64, rest_error.RestErr) {
+	var numberOfLikes int64
+	if err := l.db.Where("post_id = ?", postID).Count(&numberOfLikes).Error; err != nil {
+		return -1, rest_error.NewInternalServerError("Error when trying to get number of likes", err)
+	}
+	return numberOfLikes, nil
 }

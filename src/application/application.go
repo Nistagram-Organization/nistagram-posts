@@ -60,6 +60,7 @@ func StartApplication() {
 	router.DELETE("/posts/dislike", postController.UndislikePost)
 	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
 	router.POST("/posts/comment", postController.PostComment)
+	router.GET("/posts", postController.GetUsersPosts)
 
 	router.Run(":8085")
 }
