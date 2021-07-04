@@ -24,6 +24,8 @@ type PostService interface {
 	ReportInappropriateContent(uint) rest_error.RestErr
 	PostComment(*modelComment.Comment) rest_error.RestErr
 	CreatePost(*dtos.CreatePostDTO) rest_error.RestErr
+	GetInappropriateContent() []dtos.InappropriateContentReportDTO
+	DecideOnContent(uint, bool) rest_error.RestErr
 }
 
 type postsService struct {
@@ -178,4 +180,47 @@ func (s *postsService) CreatePost(postDTO *dtos.CreatePostDTO) rest_error.RestEr
 	}
 
 	return s.postsRepository.Create(&postEntity)
+}
+
+func (s *postsService) GetInappropriateContent() []dtos.InappropriateContentReportDTO {
+	markedAsInappropriate := s.postsRepository.GetInappropriateContent()
+
+	if len(markedAsInappropriate) == 0 {
+		return []dtos.InappropriateContentReportDTO{}
+	}
+
+	var collection []dtos.InappropriateContentReportDTO
+	for i := 0; i < len(markedAsInappropriate); i++ {
+		media, _ := s.mediaGrpcClient.GetMedia(markedAsInappropriate[i].MediaID)
+
+		inappropriateContentReport := dtos.InappropriateContentReportDTO{
+			Description: markedAsInappropriate[i].Description,
+			AuthorEmail: markedAsInappropriate[i].UserEmail,
+			Image:       media,
+			PostID:      markedAsInappropriate[i].ID,
+		}
+		collection = append(collection, inappropriateContentReport)
+	}
+
+	return collection
+}
+
+func (s *postsService) DecideOnContent(id uint, delete bool) rest_error.RestErr {
+	post, err := s.postsRepository.Get(id)
+	if err != nil {
+		return err
+	}
+
+	if delete {
+		if err := s.postsRepository.Delete(post); err != nil {
+			return err
+		}
+	} else {
+		post.MarkedAsInappropriate = false
+		if err := s.postsRepository.Update(post); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
