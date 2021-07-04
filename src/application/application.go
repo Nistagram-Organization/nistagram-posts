@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
@@ -9,13 +10,20 @@ import (
 	likerepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/like"
 	postrepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
 	postservice "github.com/Nistagram-Organization/nistagram-posts/src/services/post"
+	"github.com/Nistagram-Organization/nistagram-posts/src/services/post_grpc_service"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/comment"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/dislike"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/user_tag"
+	"github.com/Nistagram-Organization/nistagram-shared/src/proto"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/soheilhy/cmux"
+	"google.golang.org/grpc"
+	"log"
+	"net"
+	"net/http"
 )
 
 var (
@@ -43,12 +51,24 @@ func StartApplication() {
 		panic(err)
 	}
 
+	port := ":8085"
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1%s", port))
+	if err != nil {
+		panic(err)
+	}
+
+	m := cmux.New(l)
+
+	grpcListener := m.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
+	httpListener := m.Match(cmux.HTTP1Fast())
+
 	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
 	commentRepo := commentRepository.NewCommentRepository(database)
 	dislikeRepo := dislikerepository.NewDislikeRepository(database)
 	likeRepo := likerepository.NewLikeRepository(database)
 	postRepo := postrepository.NewPostRepository(database)
 	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient)
+	postGrpcService := post_grpc_service.NewPostGrpcService(postService)
 
 	postController := controller.NewPostController(postService)
 
@@ -60,6 +80,18 @@ func StartApplication() {
 	router.DELETE("/posts/dislike", postController.UndislikePost)
 	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
 	router.POST("/posts/comment", postController.PostComment)
+	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
 
-	router.Run(":8085")
+	grpcS := grpc.NewServer()
+	proto.RegisterPostServiceServer(grpcS, postGrpcService)
+
+	httpS := &http.Server{
+		Handler: router,
+	}
+
+	go grpcS.Serve(grpcListener)
+	go httpS.Serve(httpListener)
+
+	log.Printf("Running http and grpc server on port %s", port)
+	m.Serve()
 }

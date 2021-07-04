@@ -19,6 +19,7 @@ type PostController interface {
 	ReportInappropriateContent(*gin.Context)
 	PostComment(*gin.Context)
 	CreatePost(*gin.Context)
+	GetInappropriateContent(*gin.Context)
 }
 
 type postsController struct {
@@ -157,4 +158,8 @@ func (p *postsController) CreatePost(ctx *gin.Context) {
 
 func (p *postsController) GetAll(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, p.postsService.GetAll())
+}
+
+func (p *postsController) GetInappropriateContent(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, p.postsService.GetInappropriateContent())
 }
