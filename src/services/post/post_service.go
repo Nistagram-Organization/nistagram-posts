@@ -2,6 +2,7 @@ package post
 
 import (
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/user_grpc_client"
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
@@ -13,6 +14,9 @@ import (
 	modelLike "github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	modelPost "github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/rest_error"
+	"regexp"
+	"strings"
+	"time"
 )
 
 type PostService interface {
@@ -24,6 +28,7 @@ type PostService interface {
 	ReportInappropriateContent(uint) rest_error.RestErr
 	PostComment(*modelComment.Comment) rest_error.RestErr
 	CreatePost(*dtos.CreatePostDTO) rest_error.RestErr
+	GetUsersPosts(string, string) ([]dtos.PostDTO, rest_error.RestErr)
 	GetInappropriateContent() []dtos.InappropriateContentReportDTO
 	DecideOnContent(uint, bool) rest_error.RestErr
 }
@@ -34,16 +39,18 @@ type postsService struct {
 	dislikesRepository dislike.DislikeRepository
 	commentsRepository comment.CommentRepository
 	mediaGrpcClient    media_grpc_client.MediaGrpcClient
+	userGrpcClient     user_grpc_client.UserGrpcClient
 }
 
 func NewPostService(postsRepository post.PostRepository, likesRepository like.LikeRepository, dislikesRepository dislike.DislikeRepository,
-	commentsRepository comment.CommentRepository, mediaGrpcClient media_grpc_client.MediaGrpcClient) PostService {
+	commentsRepository comment.CommentRepository, mediaGrpcClient media_grpc_client.MediaGrpcClient, userGrpcClient user_grpc_client.UserGrpcClient) PostService {
 	return &postsService{
 		postsRepository:    postsRepository,
 		likesRepository:    likesRepository,
 		dislikesRepository: dislikesRepository,
 		commentsRepository: commentsRepository,
 		mediaGrpcClient:    mediaGrpcClient,
+		userGrpcClient:     userGrpcClient,
 	}
 }
 
@@ -182,6 +189,132 @@ func (s *postsService) CreatePost(postDTO *dtos.CreatePostDTO) rest_error.RestEr
 	return s.postsRepository.Create(&postEntity)
 }
 
+func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string) ([]dtos.PostDTO, rest_error.RestErr) {
+	var postsDTOs []dtos.PostDTO
+	var posts []modelPost.Post
+	var postErr rest_error.RestErr
+
+	// Get all users posts
+	if posts, postErr = s.postsRepository.GetUsersPosts(userEmail); postErr != nil {
+		return nil, postErr
+	}
+
+	layout := "02.01.2006. 03:04"
+	for _, postEntity := range posts {
+		description := s.ProcessTags(postEntity.Description)
+		// Convert time to format dd.MM.yyyy. HH:mm
+		t := time.Unix(postEntity.Date, 0)
+		date := t.Format(layout)
+
+		// GRPC call media service to get post's image
+		var image string
+		var err error
+		getMediaRequest := dtos.GetMediaRequest{
+			ID: uint64(postEntity.MediaID),
+		}
+		if image, err = s.mediaGrpcClient.GetMedia(getMediaRequest); err != nil {
+			return nil, rest_error.NewInternalServerError("user grpc client error when getting media", err)
+		}
+
+		// GRPC CALL TO USER SERVICE FOR USERNAME
+		var username string
+		if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: userEmail}); err != nil {
+			return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
+		}
+
+		// Check if logged user liked, disliked or added post to favorites
+		liked := false
+		disliked := false
+		inFavorites := false
+		if loggedInUserEmail != "" {
+			if _, postErr = s.likesRepository.GetByUserAndPost(loggedInUserEmail, postEntity.ID); postErr == nil {
+				liked = true
+			}
+
+			if _, postErr = s.dislikesRepository.GetByUserAndPost(loggedInUserEmail, postEntity.ID); postErr == nil {
+				disliked = true
+			}
+
+			// GRPC CALL TO USER SERVICE TO CHECK IF POST IS IN USER'S FAVORITES
+			checkFavoritesRequest := dtos.CheckFavoritesRequest{
+				Email:  loggedInUserEmail,
+				PostID: postEntity.ID,
+			}
+			if inFavorites, err = s.userGrpcClient.CheckPostIsInFavorites(checkFavoritesRequest); err != nil {
+				return nil, rest_error.NewInternalServerError("user grpc client error when checking favorites", err)
+			}
+		}
+
+		// Calculate number of post's likes and dislikes
+		var numberOfLikes int64
+		if numberOfLikes, postErr = s.likesRepository.GetNumberOfLikes(postEntity.ID); postErr != nil {
+			return nil, postErr
+		}
+
+		var numberOfDislikes int64
+		if numberOfDislikes, postErr = s.dislikesRepository.GetNumberOfDislikes(postEntity.ID); postErr != nil {
+			return nil, postErr
+		}
+
+		// Get posts's comments
+		var commentsDTOs = make([]dtos.CommentDTO, 0)
+		var comments []modelComment.Comment
+		if comments, postErr = s.commentsRepository.GetComments(postEntity.ID); postErr != nil {
+			return nil, postErr
+		}
+		for _, commentEntity := range comments {
+			if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: commentEntity.UserEmail}); err != nil {
+				return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
+			}
+			commentsDTOs = append(commentsDTOs, dtos.CommentDTO{
+				Text:     s.ProcessTags(commentEntity.Text),
+				Date:     time.Unix(commentEntity.Date, 0).Format(layout),
+				Username: username,
+			})
+		}
+
+		// CREATE POST DTO
+		postsDTOs = append(postsDTOs, dtos.PostDTO{
+			ID:          postEntity.ID,
+			Description: description,
+			Date:        date,
+			Image:       image,
+			Username:    username,
+			Liked:       liked,
+			Disliked:    disliked,
+			InFavorites: inFavorites,
+			Likes:       uint(numberOfLikes),
+			Dislikes:    uint(numberOfDislikes),
+			Comments:    commentsDTOs,
+		})
+	}
+
+	return postsDTOs, nil
+}
+
+func (s *postsService) ProcessTags(text string) string {
+	r := regexp.MustCompile(`@[A-Za-z0-9_.]+`)
+	matches := r.FindAllString(text, -1)
+
+	var link string
+	var taggable bool
+	checkTaggableRequest := dtos.CheckTaggableRequest{
+		Username: "",
+	}
+
+	for _, tag := range matches {
+		checkTaggableRequest.Username = tag[1:]
+		if taggable, _ = s.userGrpcClient.CheckIfUserIsTaggable(checkTaggableRequest); !taggable {
+			continue
+		}
+
+		link = "<a href='/users/" + tag[1:] + "' >" + tag + "</a>"
+		text = strings.ReplaceAll(text, tag, link)
+	}
+
+	return text
+}
+
 func (s *postsService) GetInappropriateContent() []dtos.InappropriateContentReportDTO {
 	markedAsInappropriate := s.postsRepository.GetInappropriateContent()
 
@@ -191,7 +324,10 @@ func (s *postsService) GetInappropriateContent() []dtos.InappropriateContentRepo
 
 	var collection []dtos.InappropriateContentReportDTO
 	for i := 0; i < len(markedAsInappropriate); i++ {
-		media, _ := s.mediaGrpcClient.GetMedia(markedAsInappropriate[i].MediaID)
+		getMediaRequest := dtos.GetMediaRequest{
+			ID: uint64(markedAsInappropriate[i].MediaID),
+		}
+		media, _ := s.mediaGrpcClient.GetMedia(getMediaRequest)
 
 		inappropriateContentReport := dtos.InappropriateContentReportDTO{
 			Description: markedAsInappropriate[i].Description,

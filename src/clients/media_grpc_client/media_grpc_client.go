@@ -9,7 +9,7 @@ import (
 
 type MediaGrpcClient interface {
 	SaveMedia(dtos.SaveMediaRequest) (*uint, error)
-	GetMedia(uint) (string, error)
+	GetMedia(dtos.GetMediaRequest) (string, error)
 }
 
 type mediaGrpcClient struct {
@@ -48,7 +48,7 @@ func (c *mediaGrpcClient) SaveMedia(request dtos.SaveMediaRequest) (*uint, error
 	return id, nil
 }
 
-func (c *mediaGrpcClient) GetMedia(id uint) (string, error) {
+func (c *mediaGrpcClient) GetMedia(request dtos.GetMediaRequest) (string, error) {
 	conn, err := grpc.Dial("127.0.0.1:8089", grpc.WithInsecure())
 	if err != nil {
 		return "", err
@@ -62,7 +62,7 @@ func (c *mediaGrpcClient) GetMedia(id uint) (string, error) {
 
 	r, err := client.GetMedia(ctx,
 		&proto.GetMediaRequest{
-			Id: uint64(id),
+			Id: request.ID,
 		},
 	)
 
@@ -70,7 +70,5 @@ func (c *mediaGrpcClient) GetMedia(id uint) (string, error) {
 		return "", err
 	}
 
-	image := r.Image.ImageBase64
-
-	return image, nil
+	return r.Image.ImageBase64, nil
 }

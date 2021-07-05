@@ -3,6 +3,7 @@ package application
 import (
 	"fmt"
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/user_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
 	commentRepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
@@ -42,11 +43,11 @@ func StartApplication() {
 	}
 
 	if err := database.Migrate(
-		&post.Post{},
 		&like.Like{},
 		&dislike.Dislike{},
 		&comment.Comment{},
 		&user_tag.UserTag{},
+		&post.Post{},
 	); err != nil {
 		panic(err)
 	}
@@ -63,16 +64,16 @@ func StartApplication() {
 	httpListener := m.Match(cmux.HTTP1Fast())
 
 	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
+	userGrpcClient := user_grpc_client.NewUserGrpcClient()
 	commentRepo := commentRepository.NewCommentRepository(database)
 	dislikeRepo := dislikerepository.NewDislikeRepository(database)
 	likeRepo := likerepository.NewLikeRepository(database)
 	postRepo := postrepository.NewPostRepository(database)
-	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient)
+	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient, userGrpcClient)
 	postGrpcService := post_grpc_service.NewPostGrpcService(postService)
 
 	postController := controller.NewPostController(postService)
 
-	router.GET("/posts", postController.GetAll)
 	router.POST("/posts", postController.CreatePost)
 	router.POST("/posts/like", postController.LikePost)
 	router.DELETE("/posts/like", postController.UnlikePost)
@@ -80,6 +81,7 @@ func StartApplication() {
 	router.DELETE("/posts/dislike", postController.UndislikePost)
 	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
 	router.POST("/posts/comment", postController.PostComment)
+	router.GET("/posts", postController.GetUsersPosts)
 	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
 
 	grpcS := grpc.NewServer()
