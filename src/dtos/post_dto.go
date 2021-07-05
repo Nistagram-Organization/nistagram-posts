@@ -4,6 +4,7 @@ type PostDTO struct {
 	ID          uint   `json:"id"`
 	Description string `json:"description"`
 	Date        string `json:"date"`
+	Timestamp   int64  `json:"timestamp"`
 	Image       string `json:"image"`
 	Username    string `json:"username"`
 	Liked       bool   `json:"liked"`

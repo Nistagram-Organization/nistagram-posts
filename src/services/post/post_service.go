@@ -15,6 +15,7 @@ import (
 	modelPost "github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/rest_error"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -31,6 +32,7 @@ type PostService interface {
 	GetUsersPosts(string, string) ([]dtos.PostDTO, rest_error.RestErr)
 	GetInappropriateContent() []dtos.InappropriateContentReportDTO
 	DecideOnContent(uint, bool) rest_error.RestErr
+	GetPostsFeed(string) ([]dtos.PostDTO, rest_error.RestErr)
 }
 
 type postsService struct {
@@ -278,6 +280,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 			ID:          postEntity.ID,
 			Description: description,
 			Date:        date,
+			Timestamp:   postEntity.Date,
 			Image:       image,
 			Username:    username,
 			Liked:       liked,
@@ -342,21 +345,50 @@ func (s *postsService) GetInappropriateContent() []dtos.InappropriateContentRepo
 }
 
 func (s *postsService) DecideOnContent(id uint, delete bool) rest_error.RestErr {
-	post, err := s.postsRepository.Get(id)
+	postEntity, err := s.postsRepository.Get(id)
 	if err != nil {
 		return err
 	}
 
 	if delete {
-		if err := s.postsRepository.Delete(post); err != nil {
+		if err := s.postsRepository.Delete(postEntity); err != nil {
 			return err
 		}
 	} else {
-		post.MarkedAsInappropriate = false
-		if err := s.postsRepository.Update(post); err != nil {
+		postEntity.MarkedAsInappropriate = false
+		if err := s.postsRepository.Update(postEntity); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (s *postsService) GetPostsFeed(user string) ([]dtos.PostDTO, rest_error.RestErr) {
+	getFollowingUsersRequest := dtos.GetFollowingUsersRequest{
+		UserEmail: user,
+	}
+	var followedUsers []string
+	var err error
+
+	if followedUsers, err = s.userGrpcClient.GetFollowingUsers(getFollowingUsersRequest); err != nil {
+		return nil, rest_error.NewInternalServerError("user grpc client error when getting following users", err)
+	}
+
+	var feedPosts []dtos.PostDTO
+	var posts []dtos.PostDTO
+	var restErr rest_error.RestErr
+
+	for _, u := range followedUsers {
+		if posts, restErr = s.GetUsersPosts(u, user); restErr != nil {
+			return nil, restErr
+		}
+		feedPosts = append(feedPosts, posts...)
+	}
+
+	sort.Slice(feedPosts, func(i, j int) bool {
+		return feedPosts[i].Timestamp > feedPosts[j].Timestamp
+	})
+
+	return feedPosts, nil
 }
