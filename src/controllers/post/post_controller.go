@@ -21,6 +21,7 @@ type PostController interface {
 	CreatePost(*gin.Context)
 	GetUsersPosts(ctx *gin.Context)
 	GetInappropriateContent(*gin.Context)
+	GetPostsFeed(*gin.Context)
 }
 
 type postsController struct {
@@ -166,6 +167,19 @@ func (p *postsController) GetUsersPosts(ctx *gin.Context) {
 	var getErr rest_error.RestErr
 
 	postsDTOs, getErr = p.postsService.GetUsersPosts(ctx.Query("user"), ctx.Query("logged_in_user"))
+	if getErr != nil {
+		ctx.JSON(getErr.Status(), getErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, postsDTOs)
+}
+
+func (p *postsController) GetPostsFeed(ctx *gin.Context) {
+	var postsDTOs []dtos.PostDTO
+	var getErr rest_error.RestErr
+
+	postsDTOs, getErr = p.postsService.GetPostsFeed(ctx.Query("user"))
 	if getErr != nil {
 		ctx.JSON(getErr.Status(), getErr)
 		return

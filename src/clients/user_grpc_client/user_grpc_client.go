@@ -5,12 +5,14 @@ import (
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
 	"github.com/Nistagram-Organization/nistagram-shared/src/proto"
 	"google.golang.org/grpc"
+	"io"
 )
 
 type UserGrpcClient interface {
 	GetUsername(dtos.GetUsernameRequest) (string, error)
 	CheckPostIsInFavorites(dtos.CheckFavoritesRequest) (bool, error)
 	CheckIfUserIsTaggable(dtos.CheckTaggableRequest) (bool, error)
+	GetFollowingUsers(dtos.GetFollowingUsersRequest) ([]string, error)
 }
 
 type userGrpcClient struct {
@@ -59,7 +61,7 @@ func (u *userGrpcClient) CheckPostIsInFavorites(request dtos.CheckFavoritesReque
 
 	r, err := client.CheckIfPostIsInFavorites(ctx,
 		&proto.CheckFavoritesRequest{
-			Email: request.Email,
+			Email:  request.Email,
 			PostID: uint64(request.PostID),
 		},
 	)
@@ -94,4 +96,42 @@ func (u *userGrpcClient) CheckIfUserIsTaggable(request dtos.CheckTaggableRequest
 	}
 
 	return r.Taggable, nil
+}
+
+func (u *userGrpcClient) GetFollowingUsers(request dtos.GetFollowingUsersRequest) ([]string, error) {
+	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := proto.NewUserServiceClient(conn)
+
+	stream, err := client.GetFollowingUsers(ctx,
+		&proto.GetFollowingUsersRequest{
+			UserEmail: request.UserEmail,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var posts []string
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		posts = append(posts, resp.User)
+	}
+
+	return posts, nil
 }

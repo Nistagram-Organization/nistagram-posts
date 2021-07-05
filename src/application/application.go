@@ -83,6 +83,7 @@ func StartApplication() {
 	router.POST("/posts/comment", postController.PostComment)
 	router.GET("/posts", postController.GetUsersPosts)
 	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
+	router.GET("/posts/feed", postController.GetPostsFeed)
 
 	grpcS := grpc.NewServer()
 	proto.RegisterPostServiceServer(grpcS, postGrpcService)
