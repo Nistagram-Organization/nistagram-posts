@@ -50,7 +50,7 @@ func NewPostService(postsRepository post.PostRepository, likesRepository like.Li
 		dislikesRepository: dislikesRepository,
 		commentsRepository: commentsRepository,
 		mediaGrpcClient:    mediaGrpcClient,
-		userGrpcClient: userGrpcClient,
+		userGrpcClient:     userGrpcClient,
 	}
 }
 
@@ -237,7 +237,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 
 			// GRPC CALL TO USER SERVICE TO CHECK IF POST IS IN USER'S FAVORITES
 			checkFavoritesRequest := dtos.CheckFavoritesRequest{
-				Email: loggedInUserEmail,
+				Email:  loggedInUserEmail,
 				PostID: postEntity.ID,
 			}
 			if inFavorites, err = s.userGrpcClient.CheckPostIsInFavorites(checkFavoritesRequest); err != nil {
@@ -302,7 +302,7 @@ func (s *postsService) ProcessTags(text string) string {
 		Username: "",
 	}
 
-	for _, tag:= range matches {
+	for _, tag := range matches {
 		checkTaggableRequest.Username = tag[1:]
 		if taggable, _ = s.userGrpcClient.CheckIfUserIsTaggable(checkTaggableRequest); !taggable {
 			continue
