@@ -52,7 +52,7 @@ func (l *likesRepository) Delete(like *like.Like) rest_error.RestErr {
 
 func (l *likesRepository) GetNumberOfLikes(postID uint) (int64, rest_error.RestErr) {
 	var numberOfLikes int64
-	if err := l.db.Where("post_id = ?", postID).Count(&numberOfLikes).Error; err != nil {
+	if err := l.db.Model(&like.Like{}).Where("post_id = ?", postID).Count(&numberOfLikes).Error; err != nil {
 		return -1, rest_error.NewInternalServerError("Error when trying to get number of likes", err)
 	}
 	return numberOfLikes, nil

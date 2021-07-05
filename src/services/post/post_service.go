@@ -1,8 +1,8 @@
 package post
 
 import (
-	"fmt"
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/user_grpc_client"
 	"github.com/Nistagram-Organization/nistagram-posts/src/dtos"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
 	"github.com/Nistagram-Organization/nistagram-posts/src/repositories/dislike"
@@ -35,16 +35,18 @@ type postsService struct {
 	dislikesRepository dislike.DislikeRepository
 	commentsRepository comment.CommentRepository
 	mediaGrpcClient    media_grpc_client.MediaGrpcClient
+	userGrpcClient     user_grpc_client.UserGrpcClient
 }
 
 func NewPostService(postsRepository post.PostRepository, likesRepository like.LikeRepository, dislikesRepository dislike.DislikeRepository,
-	commentsRepository comment.CommentRepository, mediaGrpcClient media_grpc_client.MediaGrpcClient) PostService {
+	commentsRepository comment.CommentRepository, mediaGrpcClient media_grpc_client.MediaGrpcClient, userGrpcClient user_grpc_client.UserGrpcClient) PostService {
 	return &postsService{
 		postsRepository:    postsRepository,
 		likesRepository:    likesRepository,
 		dislikesRepository: dislikesRepository,
 		commentsRepository: commentsRepository,
 		mediaGrpcClient:    mediaGrpcClient,
+		userGrpcClient: userGrpcClient,
 	}
 }
 
@@ -189,23 +191,36 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 	var postErr rest_error.RestErr
 
 	// Get all users posts
-	if posts, postErr = s.postsRepository.GetUsersPosts(userEmail); postErr == nil {
+	if posts, postErr = s.postsRepository.GetUsersPosts(userEmail); postErr != nil {
 		return nil, postErr
 	}
 
+	layout := "02.01.2006. 03:04"
 	for _, postEntity := range posts {
 		// Convert time to format dd.MM.yyyy. HH:mm
 		t := time.Unix(postEntity.Date, 0)
-		date := t.Format("02.01.2006. 03:04")
+		date := t.Format(layout)
 
-		// GRPC CALL TO MEDIA SERVICE FOR IMAGE
+		// GRPC call media service to get post's image
+		var image string
+		var err error
+		getMediaRequest := dtos.GetMediaRequest{
+			ID: uint64(postEntity.MediaID),
+		}
+		if image, err = s.mediaGrpcClient.GetMedia(getMediaRequest); err != nil {
+			return nil, rest_error.NewInternalServerError("user grpc client error when getting media", err)
+		}
 
 		// GRPC CALL TO USER SERVICE FOR USERNAME
+		var username string
+		if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: userEmail}); err != nil {
+			return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
+		}
 
 		// Check if logged user liked, disliked or added post to favorites
 		liked := false
 		disliked := false
-		favorited := false
+		inFavorites := false
 		if loggedInUserEmail != "" {
 			if _, postErr = s.likesRepository.GetByUserAndPost(loggedInUserEmail, postEntity.ID); postErr == nil {
 				liked = true
@@ -216,6 +231,13 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 			}
 
 			// GRPC CALL TO USER SERVICE TO CHECK IF POST IS IN USER'S FAVORITES
+			checkFavoritesRequest := dtos.CheckFavoritesRequest{
+				Email: loggedInUserEmail,
+				PostID: postEntity.ID,
+			}
+			if inFavorites, err = s.userGrpcClient.CheckPostIsInFavorites(checkFavoritesRequest); err != nil {
+				return nil, rest_error.NewInternalServerError("user grpc client error when checking favorites", err)
+			}
 		}
 
 		// Calculate number of post's likes and dislikes
@@ -230,21 +252,36 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 		}
 
 		// Get posts's comments
-		var commentsDTOs []dtos.CommentDTO
+		var commentsDTOs = make([]dtos.CommentDTO, 0)
 		var comments []modelComment.Comment
 		if comments, postErr = s.commentsRepository.GetComments(postEntity.ID); postErr != nil {
 			return nil, postErr
 		}
 		for _, commentEntity := range comments {
-			// GRPC CALL TO USER SERVICE TO GET USERNAME
+			if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: commentEntity.UserEmail}); err != nil {
+				return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
+			}
 			commentsDTOs = append(commentsDTOs, dtos.CommentDTO{
 				Text:     commentEntity.Text,
-				Date:     time.Unix(commentEntity.Date, 0).Format("02.01.2006. 03:04"),
-				Username: "",
+				Date:     time.Unix(commentEntity.Date, 0).Format(layout),
+				Username: username,
 			})
 		}
 
 		// CREATE POST DTO
+		postsDTOs = append(postsDTOs, dtos.PostDTO{
+			ID:          postEntity.ID,
+			Description: postEntity.Description,
+			Date:        date,
+			Image:       image,
+			Username:    username,
+			Liked:       liked,
+			Disliked:    disliked,
+			InFavorites: inFavorites,
+			Likes:       uint(numberOfLikes),
+			Dislikes:    uint(numberOfDislikes),
+			Comments:    commentsDTOs,
+		})
 	}
 
 	return postsDTOs, nil

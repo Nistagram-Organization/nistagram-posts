@@ -2,6 +2,7 @@ package application
 
 import (
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
+	"github.com/Nistagram-Organization/nistagram-posts/src/clients/user_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/datasources/mysql"
 	commentRepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/comment"
@@ -34,25 +35,25 @@ func StartApplication() {
 	}
 
 	if err := database.Migrate(
-		&post.Post{},
 		&like.Like{},
 		&dislike.Dislike{},
 		&comment.Comment{},
 		&user_tag.UserTag{},
+		&post.Post{},
 	); err != nil {
 		panic(err)
 	}
 
 	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
+	userGrpcClient := user_grpc_client.NewUserGrpcClient()
 	commentRepo := commentRepository.NewCommentRepository(database)
 	dislikeRepo := dislikerepository.NewDislikeRepository(database)
 	likeRepo := likerepository.NewLikeRepository(database)
 	postRepo := postrepository.NewPostRepository(database)
-	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient)
+	postService := postservice.NewPostService(postRepo, likeRepo, dislikeRepo, commentRepo, mediaGrpcClient, userGrpcClient)
 
 	postController := controller.NewPostController(postService)
 
-	router.GET("/posts", postController.GetAll)
 	router.POST("/posts", postController.CreatePost)
 	router.POST("/posts/like", postController.LikePost)
 	router.DELETE("/posts/like", postController.UnlikePost)

@@ -8,7 +8,7 @@ type PostDTO struct {
 	Username    string `json:"username"`
 	Liked       bool   `json:"liked"`
 	Disliked    bool   `json:"disliked"`
-	Favorited   bool   `json:"favorited"`
+	InFavorites bool   `json:"in_favorites"`
 	Likes       uint   `json:"likes"`
 	Dislikes    uint   `json:"dislikes"`
 	Comments    []CommentDTO
