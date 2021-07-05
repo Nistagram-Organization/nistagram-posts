@@ -14,6 +14,8 @@ type PostRepository interface {
 	Update(*post.Post) rest_error.RestErr
 	Create(*post.Post) rest_error.RestErr
 	GetUsersPosts(string) ([]post.Post, rest_error.RestErr)
+	GetInappropriateContent() []post.Post
+	Delete(*post.Post) rest_error.RestErr
 }
 
 type postsRepository struct {
@@ -64,6 +66,21 @@ func (p *postsRepository) Create(post *post.Post) rest_error.RestErr {
 func (p *postsRepository) Update(post *post.Post) rest_error.RestErr {
 	if err := p.db.Save(post).Error; err != nil {
 		return rest_error.NewInternalServerError("Error when trying to update post", err)
+	}
+	return nil
+}
+
+func (p *postsRepository) GetInappropriateContent() []post.Post {
+	var collection []post.Post
+	if err := p.db.Where(&post.Post{MarkedAsInappropriate: true}).Find(&collection).Error; err != nil {
+		return []post.Post{}
+	}
+	return collection
+}
+
+func (p *postsRepository) Delete(post *post.Post) rest_error.RestErr {
+	if err := p.db.Delete(post).Error; err != nil {
+		return rest_error.NewInternalServerError("Error when trying to delete a post", err)
 	}
 	return nil
 }

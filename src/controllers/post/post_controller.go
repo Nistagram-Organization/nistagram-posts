@@ -20,6 +20,7 @@ type PostController interface {
 	PostComment(*gin.Context)
 	CreatePost(*gin.Context)
 	GetUsersPosts(ctx *gin.Context)
+	GetInappropriateContent(*gin.Context)
 }
 
 type postsController struct {
@@ -171,4 +172,8 @@ func (p *postsController) GetUsersPosts(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, postsDTOs)
+}
+
+func (p *postsController) GetInappropriateContent(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, p.postsService.GetInappropriateContent())
 }
