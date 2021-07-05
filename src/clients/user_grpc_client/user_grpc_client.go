@@ -10,6 +10,7 @@ import (
 type UserGrpcClient interface {
 	GetUsername(dtos.GetUsernameRequest) (string, error)
 	CheckPostIsInFavorites(dtos.CheckFavoritesRequest) (bool, error)
+	CheckIfUserIsTaggable(dtos.CheckTaggableRequest) (bool, error)
 }
 
 type userGrpcClient struct {
@@ -68,4 +69,29 @@ func (u *userGrpcClient) CheckPostIsInFavorites(request dtos.CheckFavoritesReque
 	}
 
 	return r.InFavorites, nil
+}
+
+func (u *userGrpcClient) CheckIfUserIsTaggable(request dtos.CheckTaggableRequest) (bool, error) {
+	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	if err != nil {
+		return false, err
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := proto.NewUserServiceClient(conn)
+
+	r, err := client.CheckIfUserIsTaggable(ctx,
+		&proto.CheckTaggableRequest{
+			Username: request.Username,
+		},
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	return r.Taggable, nil
 }

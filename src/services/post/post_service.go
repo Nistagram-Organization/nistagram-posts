@@ -14,6 +14,8 @@ import (
 	modelLike "github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	modelPost "github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/rest_error"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -197,6 +199,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 
 	layout := "02.01.2006. 03:04"
 	for _, postEntity := range posts {
+		description := s.ProcessTags(postEntity.Description)
 		// Convert time to format dd.MM.yyyy. HH:mm
 		t := time.Unix(postEntity.Date, 0)
 		date := t.Format(layout)
@@ -262,7 +265,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 				return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
 			}
 			commentsDTOs = append(commentsDTOs, dtos.CommentDTO{
-				Text:     commentEntity.Text,
+				Text:     s.ProcessTags(commentEntity.Text),
 				Date:     time.Unix(commentEntity.Date, 0).Format(layout),
 				Username: username,
 			})
@@ -271,7 +274,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 		// CREATE POST DTO
 		postsDTOs = append(postsDTOs, dtos.PostDTO{
 			ID:          postEntity.ID,
-			Description: postEntity.Description,
+			Description: description,
 			Date:        date,
 			Image:       image,
 			Username:    username,
@@ -285,4 +288,27 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 	}
 
 	return postsDTOs, nil
+}
+
+func (s *postsService) ProcessTags(text string) string {
+	r := regexp.MustCompile(`@[A-Za-z0-9_.]+`)
+	matches := r.FindAllString(text, -1)
+
+	var link string
+	var taggable bool
+	checkTaggableRequest := dtos.CheckTaggableRequest{
+		Username: "",
+	}
+
+	for _, tag:= range matches {
+		checkTaggableRequest.Username = tag[1:]
+		if taggable, _ = s.userGrpcClient.CheckIfUserIsTaggable(checkTaggableRequest); !taggable {
+			continue
+		}
+
+		link = "<a href='/users/" + tag[1:] + "' >" + tag + "</a>"
+		text = strings.ReplaceAll(text, tag, link)
+	}
+
+	return text
 }

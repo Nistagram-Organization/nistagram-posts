@@ -1,8 +1,8 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210704161721-afef761af279 h1:2cr+UN+uA1+2pJQ5qtVmAidGTiLk+8jUKo3dNgXuOo4=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210704161721-afef761af279/go.mod h1:MPP3kNsMICBZlcGmIQEp5WMSN7AZsL7nleNAZNGj5c8=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210705123137-efdd3bf833fa h1:vUp5Nq2IEuPTyYS3QxZ31N5Zsg03n4VHq8q4A5QfvEw=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210705123137-efdd3bf833fa/go.mod h1:MPP3kNsMICBZlcGmIQEp5WMSN7AZsL7nleNAZNGj5c8=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/auth0/go-jwt-middleware v1.0.1/go.mod h1:YSeUX3z6+TF2H+7padiEqNJ73Zy9vXW72U//IgN0BIM=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
