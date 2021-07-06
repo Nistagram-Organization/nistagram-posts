@@ -18,7 +18,6 @@ import (
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/user_tag"
 	"github.com/Nistagram-Organization/nistagram-shared/src/proto"
-	"github.com/Nistagram-Organization/nistagram-shared/src/utils/prometheus_handler"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/soheilhy/cmux"
@@ -85,8 +84,6 @@ func StartApplication() {
 	router.GET("/posts", postController.GetUsersPosts)
 	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
 	router.GET("/posts/feed", postController.GetPostsFeed)
-
-	router.GET("/metrics", prometheus_handler.PrometheusGinHandler())
 
 	grpcS := grpc.NewServer()
 	proto.RegisterPostServiceServer(grpcS, postGrpcService)
