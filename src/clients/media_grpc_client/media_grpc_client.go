@@ -13,14 +13,23 @@ type MediaGrpcClient interface {
 }
 
 type mediaGrpcClient struct {
+	address string
 }
 
-func NewMediaGrpcClient() MediaGrpcClient {
-	return &mediaGrpcClient{}
+func NewMediaGrpcClient(docker bool) MediaGrpcClient {
+	var address string
+	if docker {
+		address = "nistagram-media:8089"
+	} else {
+		address = "127.0.0.1:8089"
+	}
+	return &mediaGrpcClient{
+		address: address,
+	}
 }
 
 func (c *mediaGrpcClient) SaveMedia(request dtos.SaveMediaRequest) (*uint, error) {
-	conn, err := grpc.Dial("127.0.0.1:8089", grpc.WithInsecure())
+	conn, err := grpc.Dial(c.address, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +58,7 @@ func (c *mediaGrpcClient) SaveMedia(request dtos.SaveMediaRequest) (*uint, error
 }
 
 func (c *mediaGrpcClient) GetMedia(request dtos.GetMediaRequest) (string, error) {
-	conn, err := grpc.Dial("127.0.0.1:8089", grpc.WithInsecure())
+	conn, err := grpc.Dial(c.address, grpc.WithInsecure())
 	if err != nil {
 		return "", err
 	}

@@ -1,7 +1,6 @@
 package application
 
 import (
-	"fmt"
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/media_grpc_client"
 	"github.com/Nistagram-Organization/nistagram-posts/src/clients/user_grpc_client"
 	controller "github.com/Nistagram-Organization/nistagram-posts/src/controllers/post"
@@ -26,6 +25,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+)
+
+const (
+	dockerKey = "docker"
 )
 
 var (
@@ -37,6 +41,13 @@ func StartApplication() {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AddAllowHeaders("Authorization")
 	router.Use(cors.New(corsConfig))
+
+	var docker bool
+	if os.Getenv(dockerKey) == "" {
+		docker = false
+	} else {
+		docker = true
+	}
 
 	database := mysql.NewMySqlDatabaseClient()
 	if err := database.Init(); err != nil {
@@ -54,7 +65,7 @@ func StartApplication() {
 	}
 
 	port := ":8085"
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1%s", port))
+	l, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)
 	}
@@ -64,8 +75,8 @@ func StartApplication() {
 	grpcListener := m.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
 	httpListener := m.Match(cmux.HTTP1Fast())
 
-	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient()
-	userGrpcClient := user_grpc_client.NewUserGrpcClient()
+	mediaGrpcClient := media_grpc_client.NewMediaGrpcClient(docker)
+	userGrpcClient := user_grpc_client.NewUserGrpcClient(docker)
 	commentRepo := commentRepository.NewCommentRepository(database)
 	dislikeRepo := dislikerepository.NewDislikeRepository(database)
 	likeRepo := likerepository.NewLikeRepository(database)
