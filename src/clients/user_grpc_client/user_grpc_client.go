@@ -16,14 +16,23 @@ type UserGrpcClient interface {
 }
 
 type userGrpcClient struct {
+	address string
 }
 
-func NewUserGrpcClient() UserGrpcClient {
-	return &userGrpcClient{}
+func NewUserGrpcClient(docker bool) UserGrpcClient {
+	var address string
+	if docker {
+		address = "nistagram-users:8084"
+	} else {
+		address = "127.0.0.1:8084"
+	}
+	return &userGrpcClient{
+		address: address,
+	}
 }
 
 func (u *userGrpcClient) GetUsername(request dtos.GetUsernameRequest) (string, error) {
-	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	conn, err := grpc.Dial(u.address, grpc.WithInsecure())
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +57,7 @@ func (u *userGrpcClient) GetUsername(request dtos.GetUsernameRequest) (string, e
 }
 
 func (u *userGrpcClient) CheckPostIsInFavorites(request dtos.CheckFavoritesRequest) (bool, error) {
-	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	conn, err := grpc.Dial(u.address, grpc.WithInsecure())
 	if err != nil {
 		return false, err
 	}
@@ -74,7 +83,7 @@ func (u *userGrpcClient) CheckPostIsInFavorites(request dtos.CheckFavoritesReque
 }
 
 func (u *userGrpcClient) CheckIfUserIsTaggable(request dtos.CheckTaggableRequest) (bool, error) {
-	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	conn, err := grpc.Dial(u.address, grpc.WithInsecure())
 	if err != nil {
 		return false, err
 	}
@@ -99,7 +108,7 @@ func (u *userGrpcClient) CheckIfUserIsTaggable(request dtos.CheckTaggableRequest
 }
 
 func (u *userGrpcClient) GetFollowingUsers(request dtos.GetFollowingUsersRequest) ([]string, error) {
-	conn, err := grpc.Dial("127.0.0.1:8084", grpc.WithInsecure())
+	conn, err := grpc.Dial(u.address, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
