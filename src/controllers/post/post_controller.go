@@ -22,6 +22,7 @@ type PostController interface {
 	GetUsersPosts(ctx *gin.Context)
 	GetInappropriateContent(*gin.Context)
 	GetPostsFeed(*gin.Context)
+	SearchTags(*gin.Context)
 }
 
 type postsController struct {
@@ -180,6 +181,19 @@ func (p *postsController) GetPostsFeed(ctx *gin.Context) {
 	var getErr rest_error.RestErr
 
 	postsDTOs, getErr = p.postsService.GetPostsFeed(ctx.Query("user"))
+	if getErr != nil {
+		ctx.JSON(getErr.Status(), getErr)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, postsDTOs)
+}
+
+func (p *postsController) SearchTags(ctx *gin.Context) {
+	var postsDTOs []dtos.PostDTO
+	var getErr rest_error.RestErr
+
+	postsDTOs, getErr = p.postsService.SearchTags(ctx.Query("tag"), ctx.Query("user"))
 	if getErr != nil {
 		ctx.JSON(getErr.Status(), getErr)
 		return

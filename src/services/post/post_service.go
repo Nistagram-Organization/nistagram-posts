@@ -33,6 +33,7 @@ type PostService interface {
 	GetInappropriateContent() []dtos.InappropriateContentReportDTO
 	DecideOnContent(uint, bool) rest_error.RestErr
 	GetPostsFeed(string) ([]dtos.PostDTO, rest_error.RestErr)
+	SearchTags(string, string) ([]dtos.PostDTO, rest_error.RestErr)
 }
 
 type postsService struct {
@@ -192,7 +193,6 @@ func (s *postsService) CreatePost(postDTO *dtos.CreatePostDTO) rest_error.RestEr
 }
 
 func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string) ([]dtos.PostDTO, rest_error.RestErr) {
-	var postsDTOs []dtos.PostDTO
 	var posts []modelPost.Post
 	var postErr rest_error.RestErr
 
@@ -200,6 +200,13 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 	if posts, postErr = s.postsRepository.GetUsersPosts(userEmail); postErr != nil {
 		return nil, postErr
 	}
+
+	return s.GetPostsDTOs(posts, loggedInUserEmail)
+}
+
+func (s *postsService) GetPostsDTOs(posts []modelPost.Post, loggedInUserEmail string) ([]dtos.PostDTO, rest_error.RestErr) {
+	var postsDTOs []dtos.PostDTO
+	var postErr rest_error.RestErr
 
 	layout := "02.01.2006. 03:04"
 	for _, postEntity := range posts {
@@ -220,7 +227,7 @@ func (s *postsService) GetUsersPosts(userEmail string, loggedInUserEmail string)
 
 		// GRPC CALL TO USER SERVICE FOR USERNAME
 		var username string
-		if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: userEmail}); err != nil {
+		if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: postEntity.UserEmail}); err != nil {
 			return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
 		}
 
@@ -391,4 +398,31 @@ func (s *postsService) GetPostsFeed(user string) ([]dtos.PostDTO, rest_error.Res
 	})
 
 	return feedPosts, nil
+}
+
+func (s *postsService) SearchTags(tag string, user string) ([]dtos.PostDTO, rest_error.RestErr) {
+	var posts []modelPost.Post
+	var err rest_error.RestErr
+
+	checkTaggableRequest := dtos.CheckTaggableRequest{
+		Username: tag,
+	}
+	if taggable, _ := s.userGrpcClient.CheckIfUserIsTaggable(checkTaggableRequest); !taggable {
+		return []dtos.PostDTO{}, nil
+	}
+
+	if posts, err = s.postsRepository.SearchByTag(tag); err != nil {
+		return nil, err
+	}
+
+	var postsDTO []dtos.PostDTO
+	if postsDTO, err = s.GetPostsDTOs(posts, user); err != nil {
+		return nil, err
+	}
+
+	sort.Slice(postsDTO, func(i, j int) bool {
+		return postsDTO[i].Timestamp > postsDTO[j].Timestamp
+	})
+
+	return postsDTO, nil
 }

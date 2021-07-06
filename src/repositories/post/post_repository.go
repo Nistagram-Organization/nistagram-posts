@@ -16,6 +16,7 @@ type PostRepository interface {
 	GetUsersPosts(string) ([]post.Post, rest_error.RestErr)
 	GetInappropriateContent() []post.Post
 	Delete(*post.Post) rest_error.RestErr
+	SearchByTag(string) ([]post.Post, rest_error.RestErr)
 }
 
 type postsRepository struct {
@@ -83,4 +84,17 @@ func (p *postsRepository) Delete(post *post.Post) rest_error.RestErr {
 		return rest_error.NewInternalServerError("Error when trying to delete a post", err)
 	}
 	return nil
+}
+
+func (p *postsRepository) SearchByTag(tag string) ([]post.Post, rest_error.RestErr) {
+	var posts []post.Post
+	sqlStatement := "select * from posts where description like '%@" + tag + "%'"
+
+	tx := p.db.Raw(sqlStatement).Scan(&posts)
+
+	if tx.Error != nil {
+		return nil, rest_error.NewInternalServerError("Error when trying to search by tag", tx.Error)
+	}
+
+	return posts, nil
 }
