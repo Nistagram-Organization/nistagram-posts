@@ -85,6 +85,7 @@ func StartApplication() {
 	router.GET("/posts", postController.GetUsersPosts)
 	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
 	router.GET("/posts/feed", postController.GetPostsFeed)
+	router.GET("/posts/search", postController.SearchTags)
 
 	router.GET("/metrics", prometheus_handler.PrometheusGinHandler())
 
