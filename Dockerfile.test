@@ -1,0 +1,7 @@
+FROM golang:latest
+
+WORKDIR testdir
+
+COPY . .
+
+ENTRYPOINT ["sh", "./docker-run-integration-tests.sh"]

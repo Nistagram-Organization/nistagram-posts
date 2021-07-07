@@ -31,6 +31,17 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    - name: Run nistagram-posts unit tests
+      working-directory: .
+      run: go test -v -run=.+UnitTestsSuite ./...
+    - name: Run script for integration tests
+      id: run_tests
+      run: |
+        chmod 777 ./run-all-integration-tests.sh
+        ./run-all-integration-tests.sh
+    - name: Check on failures
+      if: steps.run_tests.outputs.tests_exit_code != 0
+      run: exit 1
     - name: Build image and publish to DockerHub
       run: |
         chmod 777 ./build-upload-publish.sh
