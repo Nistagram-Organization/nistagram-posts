@@ -216,11 +216,12 @@ func (suite *PostServiceUnitTestsSuite) TestPostService_CreatePost_GRPCError() {
 		UserEmail:   "mail@mail.com",
 	}
 	saveMediaRequest := dtos.SaveMediaRequest{
-		Image: "Image",
+		Image: postDTO.Image,
 	}
-	err := rest_error.NewInternalServerError("user grpc client error when saving media", errors.New(""))
+	errGrpc := errors.New("")
+	err := rest_error.NewInternalServerError("user grpc client error when saving media", errGrpc)
 
-	suite.mediaGrpcClientMock.On("SaveMedia", saveMediaRequest).Return(new(uint), err).Once()
+	suite.mediaGrpcClientMock.On("SaveMedia", saveMediaRequest).Return(new(uint), errGrpc).Once()
 
 	createErr := suite.service.CreatePost(&postDTO)
 
@@ -234,7 +235,7 @@ func (suite *PostServiceUnitTestsSuite) TestPostService_CreatePost() {
 		UserEmail:   "mail@mail.com",
 	}
 	saveMediaRequest := dtos.SaveMediaRequest{
-		Image: "Image",
+		Image: postDTO.Image,
 	}
 	postEntity := modelPost.Post{
 		Description:           postDTO.Description,
@@ -243,9 +244,8 @@ func (suite *PostServiceUnitTestsSuite) TestPostService_CreatePost() {
 		Date:                  time_utils.Now(),
 		MediaID:               0,
 	}
-	err := rest_error.NewInternalServerError("user grpc client error when saving media", nil)
 
-	suite.mediaGrpcClientMock.On("SaveMedia", saveMediaRequest).Return(new(uint), err).Once()
+	suite.mediaGrpcClientMock.On("SaveMedia", saveMediaRequest).Return(new(uint), nil).Once()
 	suite.postsRepositoryMock.On("Create", &postEntity).Return(nil).Once()
 
 	createErr := suite.service.CreatePost(&postDTO)

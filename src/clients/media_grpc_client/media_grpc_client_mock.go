@@ -11,7 +11,7 @@ type MediaGrpcClientMock struct {
 
 func (c *MediaGrpcClientMock) SaveMedia(request dtos.SaveMediaRequest) (*uint, error) {
 	args := c.Called(request)
-	if args.Get(1) != nil {
+	if args.Get(1) == nil {
 		return args.Get(0).(*uint), nil
 	}
 	return nil, args.Get(1).(error)
