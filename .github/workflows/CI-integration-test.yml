@@ -1,0 +1,28 @@
+name: Run integration tests
+on:
+  pull_request:
+    branches:
+        - main
+        - development
+    types: [opened, synchronize]
+
+jobs:     
+  # Run integration tests
+  integration-test:
+    strategy:
+      matrix:
+        go-version: [1.15.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Run script for integration tests
+      id: run_tests
+      run: |
+        chmod 777 ./run-all-integration-tests.sh
+        ./run-all-integration-tests.sh
+    - name: Check on failures
+      if: steps.run_tests.outputs.tests_exit_code != 0
+      run: exit 1
