@@ -17,6 +17,7 @@ import (
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/user_tag"
 	"github.com/Nistagram-Organization/nistagram-shared/src/proto"
+	"github.com/Nistagram-Organization/nistagram-shared/src/utils/jwt_utils"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/prometheus_handler"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -86,16 +87,16 @@ func StartApplication() {
 
 	postController := controller.NewPostController(postService)
 
-	router.POST("/posts", postController.CreatePost)
-	router.POST("/posts/like", postController.LikePost)
-	router.DELETE("/posts/like", postController.UnlikePost)
-	router.POST("/posts/dislike", postController.DislikePost)
-	router.DELETE("/posts/dislike", postController.UndislikePost)
-	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
-	router.POST("/posts/comment", postController.PostComment)
+	router.POST("/posts", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.CreatePost)
+	router.POST("/posts/like", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.LikePost)
+	router.DELETE("/posts/like", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.UnlikePost)
+	router.POST("/posts/dislike", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.DislikePost)
+	router.DELETE("/posts/dislike", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.UndislikePost)
+	router.POST("/posts/report/:id", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.ReportInappropriateContent)
+	router.POST("/posts/comment", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.PostComment)
 	router.GET("/posts", postController.GetUsersPosts)
-	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
-	router.GET("/posts/feed", postController.GetPostsFeed)
+	router.GET("/posts/inappropriate", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"admin"}), postController.GetInappropriateContent)
+	router.GET("/posts/feed", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.GetPostsFeed)
 	router.GET("/posts/search", postController.SearchTags)
 
 	router.GET("/metrics", prometheus_handler.PrometheusGinHandler())
