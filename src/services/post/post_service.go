@@ -271,14 +271,15 @@ func (s *postsService) GetPostsDTOs(posts []modelPost.Post, loggedInUserEmail st
 		if comments, postErr = s.commentsRepository.GetComments(postEntity.ID); postErr != nil {
 			return nil, postErr
 		}
+		var commUsername string
 		for _, commentEntity := range comments {
-			if username, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: commentEntity.UserEmail}); err != nil {
+			if commUsername, err = s.userGrpcClient.GetUsername(dtos.GetUsernameRequest{Email: commentEntity.UserEmail}); err != nil {
 				return nil, rest_error.NewInternalServerError("user grpc client error when getting username", err)
 			}
 			commentsDTOs = append(commentsDTOs, dtos.CommentDTO{
 				Text:     s.ProcessTags(commentEntity.Text),
 				Date:     time.Unix(commentEntity.Date, 0).Format(layout),
-				Username: username,
+				Username: commUsername,
 			})
 		}
 
