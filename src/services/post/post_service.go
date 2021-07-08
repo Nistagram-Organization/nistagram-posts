@@ -405,6 +405,17 @@ func (s *postsService) SearchTags(tag string, user string) ([]dtos.PostDTO, rest
 	var posts []modelPost.Post
 	var err rest_error.RestErr
 
+	if user != "" {
+		checkIfUserIsBlockedRequest := dtos.CheckIfUserIsBlockedRequest{
+			User:        user,
+			BlockedUser: tag,
+		}
+
+		if blocked, _ := s.userGrpcClient.CheckIfUserIsBlocked(checkIfUserIsBlockedRequest); blocked {
+			return []dtos.PostDTO{}, nil
+		}
+	}
+
 	checkTaggableRequest := dtos.CheckTaggableRequest{
 		Username: tag,
 	}

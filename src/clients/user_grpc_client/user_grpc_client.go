@@ -13,6 +13,7 @@ type UserGrpcClient interface {
 	CheckPostIsInFavorites(dtos.CheckFavoritesRequest) (bool, error)
 	CheckIfUserIsTaggable(dtos.CheckTaggableRequest) (bool, error)
 	GetFollowingUsers(dtos.GetFollowingUsersRequest) ([]string, error)
+	CheckIfUserIsBlocked(dtos.CheckIfUserIsBlockedRequest) (bool, error)
 }
 
 type userGrpcClient struct {
@@ -143,4 +144,30 @@ func (u *userGrpcClient) GetFollowingUsers(request dtos.GetFollowingUsersRequest
 	}
 
 	return posts, nil
+}
+
+func (u *userGrpcClient) CheckIfUserIsBlocked(request dtos.CheckIfUserIsBlockedRequest) (bool, error) {
+	conn, err := grpc.Dial(u.address, grpc.WithInsecure())
+	if err != nil {
+		return false, err
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := proto.NewUserServiceClient(conn)
+
+	r, err := client.CheckIfUserIsBlocked(ctx,
+		&proto.CheckIfUserIsBlockedRequest{
+			User: request.User,
+			BlockedUser: request.BlockedUser,
+		},
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	return r.Blocked, nil
 }
