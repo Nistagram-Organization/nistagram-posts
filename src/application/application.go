@@ -11,15 +11,18 @@ import (
 	postrepository "github.com/Nistagram-Organization/nistagram-posts/src/repositories/post"
 	postservice "github.com/Nistagram-Organization/nistagram-posts/src/services/post"
 	"github.com/Nistagram-Organization/nistagram-posts/src/services/post_grpc_service"
+	"github.com/Nistagram-Organization/nistagram-shared/src/datasources"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/comment"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/dislike"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/like"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/post"
 	"github.com/Nistagram-Organization/nistagram-shared/src/model/user_tag"
 	"github.com/Nistagram-Organization/nistagram-shared/src/proto"
+	"github.com/Nistagram-Organization/nistagram-shared/src/utils/jwt_utils"
 	"github.com/Nistagram-Organization/nistagram-shared/src/utils/prometheus_handler"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
 	"log"
@@ -33,25 +36,23 @@ const (
 )
 
 var (
-	router = gin.Default()
+	router        = gin.Default()
+	requestsCount = prometheus_handler.GetHttpRequestsCounter()
+	requestsSize  = prometheus_handler.GetHttpRequestsSize()
+	uniqueUsers   = prometheus_handler.GetUniqueClients()
 )
 
-func StartApplication() {
+func configureCORS() {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AddAllowHeaders("Authorization")
 	router.Use(cors.New(corsConfig))
+}
 
-	var docker bool
-	if os.Getenv(dockerKey) == "" {
-		docker = false
-	} else {
-		docker = true
-	}
-
+func setupDatabase() (datasources.DatabaseClient, error) {
 	database := mysql.NewMySqlDatabaseClient()
 	if err := database.Init(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if err := database.Migrate(
@@ -61,6 +62,32 @@ func StartApplication() {
 		&user_tag.UserTag{},
 		&post.Post{},
 	); err != nil {
+		return nil, err
+	}
+	return database, nil
+}
+
+func registerPrometheusMiddleware() {
+	prometheus.Register(requestsCount)
+	prometheus.Register(requestsSize)
+	prometheus.Register(uniqueUsers)
+
+	router.Use(prometheus_handler.PrometheusMiddleware(requestsCount, requestsSize, uniqueUsers))
+}
+
+func StartApplication() {
+	configureCORS()
+	registerPrometheusMiddleware()
+
+	var docker bool
+	if os.Getenv(dockerKey) == "" {
+		docker = false
+	} else {
+		docker = true
+	}
+
+	database, err := setupDatabase()
+	if err != nil {
 		panic(err)
 	}
 
@@ -86,16 +113,16 @@ func StartApplication() {
 
 	postController := controller.NewPostController(postService)
 
-	router.POST("/posts", postController.CreatePost)
-	router.POST("/posts/like", postController.LikePost)
-	router.DELETE("/posts/like", postController.UnlikePost)
-	router.POST("/posts/dislike", postController.DislikePost)
-	router.DELETE("/posts/dislike", postController.UndislikePost)
-	router.POST("/posts/report/:id", postController.ReportInappropriateContent)
-	router.POST("/posts/comment", postController.PostComment)
+	router.POST("/posts", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.CreatePost)
+	router.POST("/posts/like", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.LikePost)
+	router.DELETE("/posts/like", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.UnlikePost)
+	router.POST("/posts/dislike", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.DislikePost)
+	router.DELETE("/posts/dislike", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.UndislikePost)
+	router.POST("/posts/report/:id", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.ReportInappropriateContent)
+	router.POST("/posts/comment", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.PostComment)
 	router.GET("/posts", postController.GetUsersPosts)
-	router.GET("/posts/inappropriate", postController.GetInappropriateContent)
-	router.GET("/posts/feed", postController.GetPostsFeed)
+	router.GET("/posts/inappropriate", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"admin"}), postController.GetInappropriateContent)
+	router.GET("/posts/feed", jwt_utils.GetJwtMiddleware(), jwt_utils.CheckRoles([]string{"user", "agent"}), postController.GetPostsFeed)
 	router.GET("/posts/search", postController.SearchTags)
 
 	router.GET("/metrics", prometheus_handler.PrometheusGinHandler())
