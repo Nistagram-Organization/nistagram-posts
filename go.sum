@@ -1,8 +1,8 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210707201759-72e80509edbb h1:dcWhXXpjkxl1RRF0XeRuY86pzDQ5572XUSZsXkmuQAg=
-github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210707201759-72e80509edbb/go.mod h1:+J9eNdOG7WDf6sTkJVDjgY0qlYCU9C0NNdtXc/11T6o=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210708132726-61fa4249471d h1:jBLes8ZY8XQ0jxRJ12YInu/2gYQT1N9hkAmZNdHCVUc=
+github.com/Nistagram-Organization/nistagram-shared v0.0.0-20210708132726-61fa4249471d/go.mod h1:+J9eNdOG7WDf6sTkJVDjgY0qlYCU9C0NNdtXc/11T6o=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
